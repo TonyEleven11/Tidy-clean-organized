@@ -1,6 +1,6 @@
 // Minimal offline cache for the app shell. Bump CACHE_NAME whenever you
 // change any of the cached files so visitors pick up the new version.
-const CACHE_NAME = "tidy-app-shell-v2";
+const CACHE_NAME = "tidy-app-shell-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
