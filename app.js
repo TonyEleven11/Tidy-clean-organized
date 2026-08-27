@@ -52,8 +52,8 @@ const DEFAULT_TASKS = [
   // Every ~5 months
   { id: "wash-window-nets", name: "Wash window nets", kind: "interval", days: 152 },
 
-  // Twice a year, pinned to specific months
-  { id: "flea-bombs", name: "Flea bombs (insect treatment)", kind: "annual", months: [9, 1] },
+  // Every ~4 months
+  { id: "flea-bombs", name: "Flea bombs (insect treatment)", kind: "interval", days: 120 },
 ];
 
 /* ========================================================================
@@ -69,12 +69,32 @@ const DEFAULT_TASKS = [
 const TASKS_KEY = "tidyAppTasks.v1";
 const STATE_KEY = "tidyAppState.v1";
 
+// One-time fixups applied to whatever tasks come back from storage (or a
+// fresh seed), so a phone that already saved an older shape of a built-in
+// task picks up a later change to it here without losing its history.
+// Add to this list; never need to remove old entries.
+function migrateTasks(list) {
+  let changed = false;
+  for (const t of list) {
+    if (t.id === "flea-bombs" && t.kind === "annual") {
+      t.kind = "interval";
+      t.days = 120;
+      delete t.months;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 function loadTasks() {
   try {
     const raw = localStorage.getItem(TASKS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length) return parsed;
+      if (Array.isArray(parsed) && parsed.length) {
+        if (migrateTasks(parsed)) saveTasks(parsed);
+        return parsed;
+      }
     }
   } catch (e) {
     console.warn("Could not read saved tasks, reseeding from defaults.", e);
@@ -419,9 +439,9 @@ function renderTodayBanner(done, total) {
   todayBannerEl.innerHTML = "";
   if (total === 0) return; // empty state message covers this case instead
 
-  let icon = "⭐";
-  let title = "You're doing great!";
-  let sub = "A tidy home, a happy mind.";
+  let icon = "🎉";
+  let title = "Congratulations!";
+  let sub = "All done for today!";
 
   if (done < total) {
     const left = total - done;
@@ -456,6 +476,7 @@ function renderTodayBanner(done, total) {
 function renderTodayRow(task, status, doneToday) {
   const li = document.createElement("li");
   li.className = "today-row";
+  li.dataset.taskId = task.id;
 
   const btn = document.createElement("button");
   btn.type = "button";
@@ -492,11 +513,27 @@ function renderTodayRow(task, status, doneToday) {
 
 const preCompletionCache = {};
 
+// When a task is ticked done, we delay the moment it actually sinks to the
+// bottom of the list (and disappears from view once you scroll past it)
+// so an accidental tap can be caught and undone before that happens.
+const REORDER_DELAY_MS = 1100;
+const pendingReorderTimers = {};
+
+function cancelPendingReorder(taskId) {
+  if (pendingReorderTimers[taskId]) {
+    clearTimeout(pendingReorderTimers[taskId]);
+    delete pendingReorderTimers[taskId];
+  }
+}
+
 function toggleDoneToday(task) {
   const now = new Date();
   const status = getTaskStatus(task, now);
+  cancelPendingReorder(task.id);
+
   if (isDoneToday(status, now)) {
-    // Un-check: restore whatever it was before today's completion.
+    // Un-check: restore whatever it was before today's completion, and
+    // reflect that everywhere immediately (no need for a delay here).
     const previous = preCompletionCache[task.id];
     if (previous === undefined || previous === null) {
       delete state[task.id];
@@ -504,15 +541,43 @@ function toggleDoneToday(task) {
       state[task.id] = previous;
     }
     delete preCompletionCache[task.id];
-  } else {
-    preCompletionCache[task.id] = state[task.id] ?? null;
-    state[task.id] = Date.now();
+    saveState(state);
+    render();
+    return;
   }
+
+  // Mark done: save it now, but only flip this one row's visual state in
+  // place — leave the list order alone for a moment so a mis-tap can be
+  // undone by tapping again before it sinks to the bottom.
+  preCompletionCache[task.id] = state[task.id] ?? null;
+  state[task.id] = Date.now();
   saveState(state);
-  render();
+
+  updateTodayRowInPlace(task);
+  renderTodayView({ rebuildList: false }); // counts/ring/banner update now
+  renderAllView();
+
+  pendingReorderTimers[task.id] = setTimeout(() => {
+    delete pendingReorderTimers[task.id];
+    render();
+  }, REORDER_DELAY_MS);
 }
 
-function renderTodayView() {
+function updateTodayRowInPlace(task) {
+  const row = Array.from(todayListEl.children).find((li) => li.dataset.taskId === task.id);
+  if (!row) return;
+  const check = row.querySelector(".check-circle");
+  const sub = row.querySelector(".today-row-sub");
+  if (check) {
+    check.classList.add("checked");
+    check.textContent = "✓";
+  }
+  if (sub) sub.textContent = "Done today ✓";
+  const btn = row.querySelector(".today-row-btn");
+  if (btn) btn.setAttribute("aria-label", `Mark "${task.name}" not done today`);
+}
+
+function renderTodayView({ rebuildList = true } = {}) {
   const now = new Date();
   const rows = tasks.map((task) => ({ task, status: getTaskStatus(task, now) }));
 
@@ -533,6 +598,8 @@ function renderTodayView() {
 
   renderTodayHeader(done, total);
   renderTodayBanner(done, total);
+
+  if (!rebuildList) return; // a pending per-row update already reflects the list
 
   todayListEl.innerHTML = "";
   todayEmptyEl.hidden = total > 0;

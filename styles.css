@@ -381,6 +381,8 @@ button {
 
 .col-task {
   min-width: 0;
+  width: 100%;
+  justify-self: stretch;
   display: flex;
   align-items: center;
   gap: 8px;

@@ -1,6 +1,7 @@
-// Minimal offline cache for the app shell. Bump CACHE_NAME whenever you
-// change any of the cached files so visitors pick up the new version.
-const CACHE_NAME = "tidy-app-shell-v6";
+// Offline cache for the app shell. Bump CACHE_NAME whenever you change any
+// of the cached files — belt-and-suspenders alongside the network-first
+// fetch strategy below (see the fetch handler for why that matters more).
+const CACHE_NAME = "tidy-app-shell-v7";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -29,20 +30,22 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Network-first: always try to fetch the latest version when the phone
+// has a connection (the normal case), only falling back to the cached
+// copy when offline. An earlier cache-first version of this file could
+// show a stale mix of old/new files for a visit or two after an update —
+// this avoids that instead of just working around it.
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const network = fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
