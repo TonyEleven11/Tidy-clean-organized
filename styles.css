@@ -329,17 +329,26 @@ button {
 .all-row-btn {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 72px 78px 14px;
-  align-items: center;
   gap: 6px;
 }
 
 .all-table-head {
+  align-items: center;
   background: var(--orange);
   color: #fff7ed;
   font-size: 0.65rem;
   font-weight: 700;
   letter-spacing: 0.03em;
   padding: 10px 12px;
+}
+
+/* Every column label stays fully white — .col-freq otherwise gets a
+   dimmer color below (that rule is meant for the data rows, not this
+   header, but shares the same class name). */
+.all-table-head .col-task,
+.all-table-head .col-freq,
+.all-table-head .col-last {
+  color: #fff7ed;
 }
 
 .all-table-head .col-task {
@@ -358,9 +367,12 @@ button {
 
 .all-row-btn {
   width: 100%;
+  align-items: start; /* top-align columns so a wrapped multi-line task
+    name doesn't drift the shorter freq/last-done text down into its
+    middle line, which reads as an overlap */
   background: none;
   border: none;
-  padding: 10px 12px;
+  padding: 12px;
   cursor: pointer;
   text-align: left;
   color: inherit;
@@ -372,6 +384,13 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.col-freq,
+.col-last,
+.col-chevron {
+  padding-top: 2px; /* nudge down slightly to optically align with the
+    first line of the task name rather than the icon's vertical center */
 }
 
 .all-row-name {

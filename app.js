@@ -216,6 +216,20 @@ function frequencyLabel(task) {
   return "";
 }
 
+// Compact variant (no "Every") for the narrow FREQ. column on the All
+// Tasks table, so it fits on one line without wrapping.
+function frequencyLabelCompact(task) {
+  if (task.kind === "interval") {
+    return `${task.days} day${task.days === 1 ? "" : "s"}`;
+  }
+  if (task.kind === "annual") {
+    return task.months
+      .map((m) => new Date(2000, m - 1, 1).toLocaleString(undefined, { month: "short" }))
+      .join(" & ");
+  }
+  return "";
+}
+
 /* ========================================================================
    Status calculation
    ------------------------------------------------------------------------
@@ -564,7 +578,7 @@ function renderAllRow(task, status) {
 
   const freqCol = document.createElement("span");
   freqCol.className = "col-freq";
-  freqCol.textContent = frequencyLabel(task);
+  freqCol.textContent = frequencyLabelCompact(task);
 
   const lastCol = document.createElement("span");
   lastCol.className = "col-last";
