@@ -11,16 +11,14 @@
 
   --orange: #f97316;
   --orange-dark: #ea580c;
-  --orange-ink: #431407;
   --teal: #0d9488;
   --teal-dark: #0f766e;
 
   --green: #059669;
-  --amber: #eab308;
-  --red: #f43f5e;
-  --green-bg: rgba(5, 150, 105, 0.09);
-  --amber-bg: rgba(234, 179, 8, 0.14);
-  --red-bg: rgba(244, 63, 94, 0.09);
+  --amber: #d97706;
+  --red: #e11d48;
+
+  --tab-bar-h: 72px;
 }
 
 * {
@@ -36,21 +34,19 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-body {
-  padding-bottom: env(safe-area-inset-bottom);
+button {
+  font-family: inherit;
 }
 
-.app-header {
-  padding: calc(env(safe-area-inset-top) + 20px) 20px 8px;
-  text-align: center;
+.view {
+  padding-bottom: calc(env(safe-area-inset-bottom) + var(--tab-bar-h) + 12px);
+  min-height: 100vh;
 }
 
-.app-header h1 {
-  font-size: 1.4rem;
-  margin: 0 0 4px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--orange-dark);
+.view-main {
+  padding: 0 16px;
+  max-width: 600px;
+  margin: 0 auto;
 }
 
 .app-sub {
@@ -59,10 +55,98 @@ body {
   font-size: 0.85rem;
 }
 
-main {
-  padding: 12px 12px 40px;
+.empty-state {
+  text-align: center;
+  color: var(--text-dim);
+  margin-top: 40px;
+  padding: 0 20px;
+  font-size: 0.95rem;
+}
+
+/* ========================================================================
+   Today tab
+   ======================================================================== */
+
+.today-header {
+  padding: calc(env(safe-area-inset-top) + 20px) 16px 4px;
   max-width: 600px;
   margin: 0 auto;
+}
+
+.greet-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.greet-icon {
+  font-size: 2rem;
+  flex: 0 0 auto;
+}
+
+.greet-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.greet-text h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--orange-dark);
+}
+
+.greet-text p {
+  margin: 2px 0 0;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+.ring-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress-ring {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-ring-inner {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-count {
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: var(--orange-dark);
+}
+
+.progress-label {
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.section-label {
+  margin: 20px 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
 }
 
 .task-list {
@@ -74,84 +158,331 @@ main {
   gap: 8px;
 }
 
-.task-row {
+.today-row-btn {
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   background: var(--card);
   border: 1px solid var(--card-border);
   border-radius: 14px;
-  padding: 14px 14px 14px 16px;
-  border-left: 5px solid var(--text-dim);
+  padding: 10px 14px;
   box-shadow: 0 1px 2px rgba(154, 52, 18, 0.05);
-}
-
-.task-row.green {
-  border-left-color: var(--green);
-  background: linear-gradient(0deg, var(--green-bg), var(--green-bg)), var(--card);
-}
-
-.task-row.amber {
-  border-left-color: var(--amber);
-  background: linear-gradient(0deg, var(--amber-bg), var(--amber-bg)), var(--card);
-}
-
-.task-row.red {
-  border-left-color: var(--red);
-  background: linear-gradient(0deg, var(--red-bg), var(--red-bg)), var(--card);
-}
-
-.task-info {
-  min-width: 0;
-  flex: 1 1 auto;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 0;
-  color: inherit;
-  font: inherit;
   cursor: pointer;
+  text-align: left;
+  transition: transform 0.06s ease;
 }
 
-.task-name {
-  font-size: 1rem;
+.today-row-btn:active {
+  transform: scale(0.99);
+}
+
+.task-icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.task-icon.small {
+  width: 30px;
+  height: 30px;
+  font-size: 0.95rem;
+}
+
+.today-row-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.today-row-name {
+  font-size: 0.98rem;
   font-weight: 600;
   overflow-wrap: break-word;
 }
 
-.task-meta {
-  margin-top: 2px;
+.today-row-sub {
+  margin-top: 1px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.check-circle {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(194, 120, 3, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 800;
+}
+
+.check-circle.checked {
+  border-color: var(--orange);
+  background: var(--orange);
+}
+
+.today-banner {
+  max-width: 600px;
+  margin: 20px auto 0;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(0deg, rgba(253, 230, 138, 0.25), rgba(253, 230, 138, 0.25)), var(--card);
+  border: 1px solid rgba(217, 119, 6, 0.18);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-left: 16px;
+  margin-right: 16px;
+}
+
+.today-banner:empty {
+  display: none;
+}
+
+.banner-icon {
+  font-size: 1.6rem;
+}
+
+.banner-title {
+  margin: 0;
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--orange-dark);
+}
+
+.banner-sub {
+  margin: 1px 0 0;
   font-size: 0.82rem;
   color: var(--text-dim);
 }
 
-.done-btn {
+.banner-heart {
+  margin-left: auto;
+  font-size: 1.3rem;
+}
+
+/* ========================================================================
+   All Tasks tab
+   ======================================================================== */
+
+.all-header {
+  padding: calc(env(safe-area-inset-top) + 20px) 16px 12px;
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.all-header-text h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.add-btn {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   border: none;
-  background: rgba(249, 115, 22, 0.12);
-  color: var(--orange-dark);
-  font-size: 1.2rem;
+  background: var(--orange);
+  color: #fff7ed;
+  font-size: 1.5rem;
+  font-weight: 700;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.08s ease, background 0.15s ease;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.35);
 }
 
-.done-btn:active {
-  transform: scale(0.9);
-  background: rgba(249, 115, 22, 0.22);
+.add-btn:active {
+  transform: scale(0.93);
 }
+
+.all-table {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  background: var(--card);
+}
+
+.all-table-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--orange);
+  color: #fff7ed;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 10px 12px;
+}
+
+.all-table-head .col-task {
+  flex: 1 1 auto;
+  padding-left: 38px; /* aligns with icon+name below */
+}
+
+.all-table-head .col-freq {
+  flex: 0 0 92px;
+}
+
+.all-table-head .col-last {
+  flex: 0 0 92px;
+}
+
+.all-table-head .col-chevron {
+  flex: 0 0 14px;
+}
+
+.all-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.all-row + .all-row {
+  border-top: 1px solid var(--card-border);
+}
+
+.all-row-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  font: inherit;
+}
+
+.col-task {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.all-row-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.col-freq {
+  flex: 0 0 92px;
+  font-size: 0.76rem;
+  color: var(--text-dim);
+  line-height: 1.25;
+}
+
+.col-last {
+  flex: 0 0 92px;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.last-date {
+  color: var(--text);
+}
+
+.last-ago {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.last-ago.green {
+  color: var(--green);
+}
+
+.last-ago.amber {
+  color: var(--amber);
+}
+
+.last-ago.red {
+  color: var(--red);
+}
+
+.col-chevron {
+  flex: 0 0 14px;
+  color: var(--text-dim);
+  font-size: 1.1rem;
+}
+
+/* ========================================================================
+   Tab bar
+   ======================================================================== */
+
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(env(safe-area-inset-bottom) + var(--tab-bar-h));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--card);
+  border-top: 1px solid var(--card-border);
+  display: flex;
+  box-shadow: 0 -2px 12px rgba(154, 52, 18, 0.06);
+  z-index: 8;
+}
+
+.tab-btn {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 6px 0 2px;
+}
+
+.tab-btn .tab-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.tab-btn .tab-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.tab-btn.active {
+  color: var(--orange);
+}
+
+/* ========================================================================
+   Toast
+   ======================================================================== */
 
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(env(safe-area-inset-bottom) + 92px);
+  bottom: calc(env(safe-area-inset-bottom) + var(--tab-bar-h) + 16px);
   transform: translate(-50%, 12px);
   background: #431407;
   color: #fff7ed;
@@ -166,6 +497,7 @@ main {
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
   max-width: calc(100% - 32px);
+  z-index: 9;
 }
 
 .toast.visible {
@@ -184,43 +516,9 @@ main {
   flex: 0 0 auto;
 }
 
-.empty-state {
-  text-align: center;
-  color: var(--text-dim);
-  margin-top: 40px;
-  padding: 0 20px;
-  font-size: 0.95rem;
-}
-
-/* Floating "add task" button */
-
-.fab {
-  position: fixed;
-  right: 20px;
-  bottom: calc(env(safe-area-inset-bottom) + 20px);
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  border: none;
-  background: var(--orange);
-  color: #fff7ed;
-  font-size: 1.8rem;
-  font-weight: 700;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.4);
-  transition: transform 0.08s ease;
-  z-index: 5;
-}
-
-.fab:active {
-  transform: scale(0.92);
-}
-
-/* Add / edit task modal */
+/* ========================================================================
+   Add / edit task modal
+   ======================================================================== */
 
 .modal-overlay {
   position: fixed;
@@ -299,6 +597,7 @@ main {
 .modal-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 10px;
   margin-top: 18px;
@@ -306,19 +605,22 @@ main {
 
 .modal-actions-right {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
   margin-left: auto;
 }
 
 .modal-btn {
   border: none;
   border-radius: 10px;
-  padding: 11px 16px;
-  font-size: 0.95rem;
+  padding: 11px 14px;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
   background: rgba(13, 148, 136, 0.1);
   color: var(--teal-dark);
+  white-space: nowrap;
 }
 
 .modal-btn.primary {

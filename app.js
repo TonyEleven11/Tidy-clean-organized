@@ -1,8 +1,9 @@
 /* =========================================================================
    Tidy, Clean, Organized — task list & logic
    -------------------------------------------------------------------------
-   Tasks are managed entirely from within the app now (tap "+" to add one,
-   tap any task's name to rename it, change its interval, or delete it).
+   Tasks are managed entirely from within the app (tap "+" on the All Tasks
+   tab to add one, tap any task row there to rename it, change its
+   interval, mark it done, or delete it).
 
    DEFAULT_TASKS below is only a *seed* — it's copied into this phone's
    storage the very first time the app is opened. After that, editing this
@@ -19,6 +20,10 @@
       still be renamed or deleted from the app, just not converted to a
       different set of months without editing this file and starting fresh.
    ========================================================================= */
+
+// Shown in the Today tab's greeting. Change this if the app is ever used
+// by someone else.
+const USER_NAME = "Tony";
 
 const DEFAULT_TASKS = [
   // Daily
@@ -74,7 +79,6 @@ function loadTasks() {
   } catch (e) {
     console.warn("Could not read saved tasks, reseeding from defaults.", e);
   }
-  // First run (or corrupted data): seed from the defaults.
   const seeded = DEFAULT_TASKS.map((t) => ({ ...t }));
   saveTasks(seeded);
   return seeded;
@@ -144,8 +148,72 @@ function startOfDay(d) {
 }
 
 function daysBetween(a, b) {
-  // Whole days between two Date objects, ignoring time-of-day.
   return Math.round((startOfDay(b) - startOfDay(a)) / DAY_MS);
+}
+
+function formatDate(d) {
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
+function relativeAgoText(lastDone, now) {
+  const n = daysBetween(lastDone, now);
+  if (n === 0) return "today";
+  if (n === 1) return "yesterday";
+  return `${n} days ago`;
+}
+
+/* ========================================================================
+   Icon + color per task
+   ------------------------------------------------------------------------
+   Purely cosmetic, guessed from the task name so tasks you add yourself
+   also get a reasonable icon without any extra input. Falls back to a
+   generic sparkle/soap icon if nothing matches.
+   ======================================================================== */
+
+const ICON_RULES = [
+  [/flea|insect|pest/, "🐜", "#fee2e2"],
+  [/bed ?sheets?|\bsheets?\b/, "🛏️", "#ede9fe"],
+  [/bathroom|toilet|\bsink\b/, "🛁", "#cffafe"],
+  [/fridge|refrigerator/, "🧊", "#dbeafe"],
+  [/microwave|kitchen|dish(es)?/, "🍽️", "#fef3c7"],
+  [/window/, "🪟", "#e0f2fe"],
+  [/floor|sweep|vacuum|\bmop\b/, "🧹", "#fef9c3"],
+  [/cornice|cobweb|\bdust/, "🕸️", "#e5e7eb"],
+  [/\bcar\b|vehicle/, "🚗", "#ffe4e6"],
+  [/\bplant/, "🪴", "#dcfce7"],
+  [/garden|outside|lawn|\byard\b/, "🏡", "#fee7c9"],
+  [/laundry|clothing|\bcloth/, "🧺", "#fae8ff"],
+  [/rubbish|trash|\bbin\b|garbage/, "🗑️", "#e5e7eb"],
+  [/tidy/, "✨", "#ffedd5"],
+];
+
+function getTaskIcon(task) {
+  const n = task.name.toLowerCase();
+  for (const [re, icon] of ICON_RULES) {
+    if (re.test(n)) return icon;
+  }
+  return "🧼";
+}
+
+function getTaskIconBg(task) {
+  const n = task.name.toLowerCase();
+  for (const [re, , bg] of ICON_RULES) {
+    if (re.test(n)) return bg;
+  }
+  return "#ffedd5";
+}
+
+function frequencyLabel(task) {
+  if (task.kind === "interval") {
+    return `Every ${task.days} day${task.days === 1 ? "" : "s"}`;
+  }
+  if (task.kind === "annual") {
+    const abbrev = task.months
+      .map((m) => new Date(2000, m - 1, 1).toLocaleString(undefined, { month: "short" }))
+      .join(" & ");
+    return `${abbrev} (yearly)`;
+  }
+  return "";
 }
 
 /* ========================================================================
@@ -162,8 +230,6 @@ function daysBetween(a, b) {
    ======================================================================== */
 
 function annualTriggerDates(months, today) {
-  // Build a sorted list of "1st of month" dates covering last year,
-  // this year, and next year, for the given trigger months.
   const dates = [];
   for (let y = today.getFullYear() - 1; y <= today.getFullYear() + 1; y++) {
     for (const m of months) {
@@ -187,7 +253,6 @@ function getTaskStatus(task, now) {
         period,
         score: Infinity,
         label: "Never done",
-        sub: `every ${period} day${period === 1 ? "" : "s"}`,
       };
     }
     const daysSince = daysBetween(lastDone, now);
@@ -197,22 +262,13 @@ function getTaskStatus(task, now) {
     if (daysSince === 0) label = "Done today";
     else if (daysSince === 1) label = "Done yesterday";
     else label = `${daysSince} days ago`;
-    return {
-      lastDone,
-      overdueDays,
-      period,
-      score,
-      label,
-      sub: `every ${period} day${period === 1 ? "" : "s"}`,
-    };
+    return { lastDone, overdueDays, period, score, label };
   }
 
   if (task.kind === "annual") {
     const period = Math.round(365 / task.months.length);
     const triggers = annualTriggerDates(task.months, now);
 
-    // Which cycle are we in? The due date is the first trigger strictly
-    // after lastDone (or the most recent past trigger if never done).
     let dueDate;
     if (lastDone) {
       dueDate = triggers.find((d) => d > startOfDay(lastDone));
@@ -224,23 +280,13 @@ function getTaskStatus(task, now) {
 
     const overdueDays = daysBetween(dueDate, now);
     const score = overdueDays / period;
-    const monthNames = task.months
-      .map((m) => new Date(2000, m - 1, 1).toLocaleString(undefined, { month: "long" }))
-      .join(" & ");
 
     let label;
     if (overdueDays > 0) label = `Overdue by ${overdueDays} day${overdueDays === 1 ? "" : "s"}`;
     else if (overdueDays === 0) label = "Due today";
     else label = `Due in ${-overdueDays} day${-overdueDays === 1 ? "" : "s"}`;
 
-    return {
-      lastDone,
-      overdueDays,
-      period,
-      score,
-      label,
-      sub: monthNames,
-    };
+    return { lastDone, overdueDays, period, score, label };
   }
 
   throw new Error(`Unknown task kind: ${task.kind}`);
@@ -253,91 +299,335 @@ function getStatusColor(status) {
   return "green";
 }
 
+function isDoneToday(status, now) {
+  return !!status.lastDone && daysBetween(status.lastDone, now) === 0;
+}
+
 /* ========================================================================
-   Rendering
+   Tab switching
    ======================================================================== */
 
-const listEl = document.getElementById("task-list");
-const toastEl = document.getElementById("toast");
-const emptyEl = document.getElementById("empty-state");
+let currentTab = "today";
 
-function render() {
+const viewToday = document.getElementById("view-today");
+const viewAll = document.getElementById("view-all");
+const tabTodayBtn = document.getElementById("tab-today-btn");
+const tabAllBtn = document.getElementById("tab-all-btn");
+
+function setTab(tab) {
+  currentTab = tab;
+  viewToday.hidden = tab !== "today";
+  viewAll.hidden = tab !== "all";
+  tabTodayBtn.classList.toggle("active", tab === "today");
+  tabAllBtn.classList.toggle("active", tab === "all");
+}
+
+tabTodayBtn.addEventListener("click", () => setTab("today"));
+tabAllBtn.addEventListener("click", () => setTab("all"));
+
+/* ========================================================================
+   Rendering — Today tab
+   ======================================================================== */
+
+const todayHeaderEl = document.getElementById("today-header");
+const todayListEl = document.getElementById("today-list");
+const todayEmptyEl = document.getElementById("today-empty");
+const todayBannerEl = document.getElementById("today-banner");
+
+function greetingParts(now) {
+  const hour = now.getHours();
+  if (hour < 12) return { icon: "☀️", text: "Good morning" };
+  if (hour < 18) return { icon: "🌤️", text: "Good afternoon" };
+  return { icon: "🌙", text: "Good evening" };
+}
+
+function renderTodayHeader(done, total) {
   const now = new Date();
+  const { icon, text } = greetingParts(now);
 
-  const rows = tasks.map((task) => {
-    const status = getTaskStatus(task, now);
-    return { task, status };
+  todayHeaderEl.innerHTML = "";
+
+  const greetRow = document.createElement("div");
+  greetRow.className = "greet-row";
+
+  const greetIcon = document.createElement("span");
+  greetIcon.className = "greet-icon";
+  greetIcon.textContent = icon;
+
+  const greetText = document.createElement("div");
+  greetText.className = "greet-text";
+  const h1 = document.createElement("h1");
+  h1.textContent = `${text}, ${USER_NAME}!`;
+  const sub = document.createElement("p");
+  sub.textContent = "Let's get things done!";
+  greetText.appendChild(h1);
+  greetText.appendChild(sub);
+
+  greetRow.appendChild(greetIcon);
+  greetRow.appendChild(greetText);
+
+  if (total > 0) {
+    const pct = Math.round((done / total) * 100);
+
+    const ring = document.createElement("div");
+    ring.className = "progress-ring";
+    ring.style.background = `conic-gradient(var(--orange) ${pct}%, #fde3c8 0)`;
+
+    const inner = document.createElement("div");
+    inner.className = "progress-ring-inner";
+    const count = document.createElement("span");
+    count.className = "progress-count";
+    count.textContent = `${done}/${total}`;
+    inner.appendChild(count);
+    ring.appendChild(inner);
+
+    const label = document.createElement("span");
+    label.className = "progress-label";
+    label.textContent = "done today";
+
+    const ringWrap = document.createElement("div");
+    ringWrap.className = "ring-wrap";
+    ringWrap.appendChild(ring);
+    ringWrap.appendChild(label);
+
+    greetRow.appendChild(ringWrap);
+  }
+
+  todayHeaderEl.appendChild(greetRow);
+
+  const sectionLabel = document.createElement("p");
+  sectionLabel.className = "section-label";
+  sectionLabel.textContent = total > 0 ? "TODAY'S TASKS" : "";
+  todayHeaderEl.appendChild(sectionLabel);
+}
+
+function renderTodayBanner(done, total) {
+  todayBannerEl.innerHTML = "";
+  if (total === 0) return; // empty state message covers this case instead
+
+  let icon = "⭐";
+  let title = "You're doing great!";
+  let sub = "A tidy home, a happy mind.";
+
+  if (done < total) {
+    const left = total - done;
+    icon = "💪";
+    title = `${left} to go`;
+    sub = "You've got this!";
+  }
+
+  const iconEl = document.createElement("span");
+  iconEl.className = "banner-icon";
+  iconEl.textContent = icon;
+
+  const textWrap = document.createElement("div");
+  const t = document.createElement("p");
+  t.className = "banner-title";
+  t.textContent = title;
+  const s = document.createElement("p");
+  s.className = "banner-sub";
+  s.textContent = sub;
+  textWrap.appendChild(t);
+  textWrap.appendChild(s);
+
+  const heart = document.createElement("span");
+  heart.className = "banner-heart";
+  heart.textContent = "💛";
+
+  todayBannerEl.appendChild(iconEl);
+  todayBannerEl.appendChild(textWrap);
+  todayBannerEl.appendChild(heart);
+}
+
+function renderTodayRow(task, status, doneToday) {
+  const li = document.createElement("li");
+  li.className = "today-row";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "today-row-btn";
+  btn.setAttribute("aria-label", `Mark "${task.name}" ${doneToday ? "not done" : "done"} today`);
+  btn.addEventListener("click", () => toggleDoneToday(task));
+
+  const iconWrap = document.createElement("span");
+  iconWrap.className = "task-icon";
+  iconWrap.style.background = getTaskIconBg(task);
+  iconWrap.textContent = getTaskIcon(task);
+
+  const textWrap = document.createElement("div");
+  textWrap.className = "today-row-text";
+  const name = document.createElement("div");
+  name.className = "today-row-name";
+  name.textContent = task.name;
+  const sub = document.createElement("div");
+  sub.className = "today-row-sub";
+  sub.textContent = doneToday ? "Done today ✓" : frequencyLabel(task);
+  textWrap.appendChild(name);
+  textWrap.appendChild(sub);
+
+  const check = document.createElement("span");
+  check.className = "check-circle" + (doneToday ? " checked" : "");
+  if (doneToday) check.textContent = "✓";
+
+  btn.appendChild(iconWrap);
+  btn.appendChild(textWrap);
+  btn.appendChild(check);
+  li.appendChild(btn);
+  return li;
+}
+
+const preCompletionCache = {};
+
+function toggleDoneToday(task) {
+  const now = new Date();
+  const status = getTaskStatus(task, now);
+  if (isDoneToday(status, now)) {
+    // Un-check: restore whatever it was before today's completion.
+    const previous = preCompletionCache[task.id];
+    if (previous === undefined || previous === null) {
+      delete state[task.id];
+    } else {
+      state[task.id] = previous;
+    }
+    delete preCompletionCache[task.id];
+  } else {
+    preCompletionCache[task.id] = state[task.id] ?? null;
+    state[task.id] = Date.now();
+  }
+  saveState(state);
+  render();
+}
+
+function renderTodayView() {
+  const now = new Date();
+  const rows = tasks.map((task) => ({ task, status: getTaskStatus(task, now) }));
+
+  const todayRows = rows.filter(
+    ({ status }) => status.score >= 0 || isDoneToday(status, now)
+  );
+
+  todayRows.sort((a, b) => {
+    const aDone = isDoneToday(a.status, now);
+    const bDone = isDoneToday(b.status, now);
+    if (aDone !== bDone) return aDone ? 1 : -1; // unfinished first
+    if (!aDone && a.status.score !== b.status.score) return b.status.score - a.status.score;
+    return a.task.name.localeCompare(b.task.name);
   });
 
-  // Most overdue first (highest score first). Ties broken alphabetically.
+  const total = todayRows.length;
+  const done = todayRows.filter(({ status }) => isDoneToday(status, now)).length;
+
+  renderTodayHeader(done, total);
+  renderTodayBanner(done, total);
+
+  todayListEl.innerHTML = "";
+  todayEmptyEl.hidden = total > 0;
+  todayEmptyEl.textContent = "Nothing due today — enjoy the break! 🎉";
+
+  for (const { task, status } of todayRows) {
+    todayListEl.appendChild(renderTodayRow(task, status, isDoneToday(status, now)));
+  }
+}
+
+/* ========================================================================
+   Rendering — All Tasks tab
+   ======================================================================== */
+
+const allListEl = document.getElementById("all-list");
+const allEmptyEl = document.getElementById("all-empty");
+
+function renderAllRow(task, status) {
+  const now = new Date();
+  const color = getStatusColor(status);
+
+  const li = document.createElement("li");
+  li.className = "all-row";
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "all-row-btn";
+  btn.setAttribute("aria-label", `Edit "${task.name}"`);
+  btn.addEventListener("click", () => openTaskModal(task));
+
+  const iconWrap = document.createElement("span");
+  iconWrap.className = "task-icon small";
+  iconWrap.style.background = getTaskIconBg(task);
+  iconWrap.textContent = getTaskIcon(task);
+
+  const nameCol = document.createElement("span");
+  nameCol.className = "col-task";
+  const nameInner = document.createElement("span");
+  nameInner.className = "all-row-name";
+  nameInner.textContent = task.name;
+  nameCol.appendChild(iconWrap);
+  nameCol.appendChild(nameInner);
+
+  const freqCol = document.createElement("span");
+  freqCol.className = "col-freq";
+  freqCol.textContent = frequencyLabel(task);
+
+  const lastCol = document.createElement("span");
+  lastCol.className = "col-last";
+  if (status.lastDone) {
+    const dateLine = document.createElement("span");
+    dateLine.className = "last-date";
+    dateLine.textContent = formatDate(status.lastDone);
+    const agoLine = document.createElement("span");
+    agoLine.className = `last-ago ${color}`;
+    agoLine.textContent = `(${relativeAgoText(status.lastDone, now)})`;
+    lastCol.appendChild(dateLine);
+    lastCol.appendChild(agoLine);
+  } else {
+    const neverLine = document.createElement("span");
+    neverLine.className = "last-ago red";
+    neverLine.textContent = "Never done";
+    lastCol.appendChild(neverLine);
+  }
+
+  const chevron = document.createElement("span");
+  chevron.className = "col-chevron";
+  chevron.textContent = "›";
+
+  btn.appendChild(nameCol);
+  btn.appendChild(freqCol);
+  btn.appendChild(lastCol);
+  btn.appendChild(chevron);
+  li.appendChild(btn);
+  return li;
+}
+
+function renderAllView() {
+  const now = new Date();
+  const rows = tasks.map((task) => ({ task, status: getTaskStatus(task, now) }));
+
   rows.sort((a, b) => {
     if (b.status.score !== a.status.score) return b.status.score - a.status.score;
     return a.task.name.localeCompare(b.task.name);
   });
 
-  listEl.innerHTML = "";
-  emptyEl.hidden = rows.length > 0;
+  allListEl.innerHTML = "";
+  allEmptyEl.hidden = rows.length > 0;
+
   for (const { task, status } of rows) {
-    listEl.appendChild(renderRow(task, status));
+    allListEl.appendChild(renderAllRow(task, status));
   }
 }
 
-function renderRow(task, status) {
-  const color = getStatusColor(status);
+/* ========================================================================
+   Shared render entrypoint
+   ======================================================================== */
 
-  const row = document.createElement("li");
-  row.className = `task-row ${color}`;
-
-  const info = document.createElement("button");
-  info.type = "button";
-  info.className = "task-info";
-  info.setAttribute("aria-label", `Edit "${task.name}"`);
-  info.addEventListener("click", () => openTaskModal(task));
-
-  const name = document.createElement("div");
-  name.className = "task-name";
-  name.textContent = task.name;
-
-  const meta = document.createElement("div");
-  meta.className = "task-meta";
-  meta.textContent = `${status.label} · ${status.sub}`;
-
-  info.appendChild(name);
-  info.appendChild(meta);
-
-  const button = document.createElement("button");
-  button.className = "done-btn";
-  button.type = "button";
-  button.setAttribute("aria-label", `Mark "${task.name}" done today`);
-  button.textContent = "✓";
-  button.addEventListener("click", (e) => {
-    e.stopPropagation();
-    markDone(task);
-  });
-
-  row.appendChild(info);
-  row.appendChild(button);
-  return row;
+function render() {
+  renderTodayView();
+  renderAllView();
 }
 
 /* ========================================================================
-   Marking done + undo
+   Undo toast (used for delete)
    ======================================================================== */
 
+const toastEl = document.getElementById("toast");
 let undoTimer = null;
-
-function markDone(task) {
-  const previous = state[task.id] ?? null;
-  state[task.id] = Date.now();
-  saveState(state);
-  render();
-  showUndoToast(`${task.name} marked done.`, () => {
-    if (previous === null) delete state[task.id];
-    else state[task.id] = previous;
-    saveState(state);
-    render();
-  });
-}
 
 function showUndoToast(message, onUndo) {
   clearTimeout(undoTimer);
@@ -378,6 +668,7 @@ const modalDaysInput = document.getElementById("modal-days");
 const modalIntervalField = document.getElementById("modal-interval-field");
 const modalAnnualNote = document.getElementById("modal-annual-note");
 const modalError = document.getElementById("modal-error");
+const modalMarkDoneBtn = document.getElementById("modal-mark-done");
 const modalDeleteBtn = document.getElementById("modal-delete");
 const modalCancelBtn = document.getElementById("modal-cancel");
 const addTaskBtn = document.getElementById("add-task-btn");
@@ -392,6 +683,7 @@ function openTaskModal(task) {
     modalTitle.textContent = "Edit task";
     modalNameInput.value = task.name;
     modalDeleteBtn.hidden = false;
+    modalMarkDoneBtn.hidden = false;
 
     if (task.kind === "annual") {
       modalIntervalField.hidden = true;
@@ -412,10 +704,10 @@ function openTaskModal(task) {
     modalIntervalField.hidden = false;
     modalAnnualNote.hidden = true;
     modalDeleteBtn.hidden = true;
+    modalMarkDoneBtn.hidden = true;
   }
 
   modalOverlay.classList.add("visible");
-  // Focus after the modal is actually visible/laid out.
   setTimeout(() => modalNameInput.focus(), 0);
 }
 
@@ -430,6 +722,16 @@ modalOverlay.addEventListener("click", (e) => {
 modalCancelBtn.addEventListener("click", closeModal);
 addTaskBtn.addEventListener("click", () => openTaskModal(null));
 
+modalMarkDoneBtn.addEventListener("click", () => {
+  if (!editingTaskId) return;
+  const task = tasks.find((t) => t.id === editingTaskId);
+  if (!task) return;
+  state[task.id] = Date.now();
+  saveState(state);
+  closeModal();
+  render();
+});
+
 modalForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const name = modalNameInput.value.trim();
@@ -442,7 +744,6 @@ modalForm.addEventListener("submit", (e) => {
   const existing = editingTaskId ? tasks.find((t) => t.id === editingTaskId) : null;
 
   if (existing && existing.kind === "annual") {
-    // Annual tasks: rename only, no interval field shown.
     existing.name = name;
     saveTasks(tasks);
     closeModal();
@@ -497,10 +798,11 @@ modalDeleteBtn.addEventListener("click", () => {
    Init
    ======================================================================== */
 
+setTab("today");
 render();
 
-// Re-render every hour so "days ago" text stays correct if the app is
-// left open across a day boundary.
+// Re-render every hour so "days ago" text / today's list stay correct if
+// the app is left open across a day boundary.
 setInterval(render, 60 * 60 * 1000);
 
 if ("serviceWorker" in navigator) {
