@@ -1,12 +1,16 @@
-// Offline cache for the app shell. Bump CACHE_NAME whenever you change any
-// of the cached files — belt-and-suspenders alongside the network-first
-// fetch strategy below (see the fetch handler for why that matters more).
-const CACHE_NAME = "tidy-app-shell-v9";
+// Offline cache for the app shell. Bump CACHE_NAME AND the ?v= query string
+// on styles.css/app.js in index.html whenever you change either of those
+// two files — belt-and-suspenders alongside the network-first fetch
+// strategy below (see the fetch handler for why that matters more). The
+// ?v= match here has to stay in sync with index.html's <link>/<script>
+// tags or this precache just wastes a request on a URL nothing else asks
+// for.
+const CACHE_NAME = "tidy-app-shell-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./app.js",
+  "./styles.css?v=10",
+  "./app.js?v=10",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
@@ -35,10 +39,18 @@ self.addEventListener("activate", (event) => {
 // copy when offline. An earlier cache-first version of this file could
 // show a stale mix of old/new files for a visit or two after an update —
 // this avoids that instead of just working around it.
+//
+// { cache: "reload" } below is deliberate and important: a plain
+// fetch(event.request) can still be silently answered by the *browser's*
+// own HTTP cache (governed by GitHub Pages' response headers), completely
+// bypassing this network-first logic without either of us knowing — this
+// forces an actual round-trip to the server every time, ignoring any
+// local HTTP cache entry, so an upload to GitHub always shows up on next
+// load instead of only "eventually".
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: "reload" })
       .then((response) => {
         if (response.ok) {
           const clone = response.clone();
