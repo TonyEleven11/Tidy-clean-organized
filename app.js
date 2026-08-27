@@ -617,6 +617,13 @@ function renderTodayView({ rebuildList = true } = {}) {
 const allListEl = document.getElementById("all-list");
 const allEmptyEl = document.getElementById("all-empty");
 
+// Deliberately NOT a multi-column table layout (grid or flex). After
+// several rounds where a side-by-side FREQ/LAST-DONE column kept looking
+// "squished" against the task name on a real iPhone — despite testing
+// clean every time here — this switched to a simple two-line stacked row:
+// the task name on its own line (nothing competing with it for width),
+// and frequency + last-done as a second, smaller line underneath. There's
+// no horizontal space contest left to get wrong.
 function renderAllRow(task, status) {
   const now = new Date();
   const color = getStatusColor(status);
@@ -635,43 +642,46 @@ function renderAllRow(task, status) {
   iconWrap.style.background = getTaskIconBg(task);
   iconWrap.textContent = getTaskIcon(task);
 
-  const nameCol = document.createElement("span");
-  nameCol.className = "col-task";
-  const nameInner = document.createElement("span");
-  nameInner.className = "all-row-name";
-  nameInner.textContent = task.name;
-  nameCol.appendChild(iconWrap);
-  nameCol.appendChild(nameInner);
+  const body = document.createElement("span");
+  body.className = "all-row-body";
 
-  const freqCol = document.createElement("span");
-  freqCol.className = "col-freq";
-  freqCol.textContent = frequencyLabelCompact(task);
+  const nameLine = document.createElement("span");
+  nameLine.className = "all-row-name";
+  nameLine.textContent = task.name;
 
-  const lastCol = document.createElement("span");
-  lastCol.className = "col-last";
+  const metaLine = document.createElement("span");
+  metaLine.className = "all-row-meta";
+
+  const freqPart = document.createElement("span");
+  freqPart.className = "meta-freq";
+  freqPart.textContent = frequencyLabel(task);
+
+  const sep = document.createElement("span");
+  sep.className = "meta-sep";
+  sep.textContent = "·";
+
+  const lastPart = document.createElement("span");
   if (status.lastDone) {
-    const dateLine = document.createElement("span");
-    dateLine.className = "last-date";
-    dateLine.textContent = formatDate(status.lastDone);
-    const agoLine = document.createElement("span");
-    agoLine.className = `last-ago ${color}`;
-    agoLine.textContent = `(${relativeAgoText(status.lastDone, now)})`;
-    lastCol.appendChild(dateLine);
-    lastCol.appendChild(agoLine);
+    lastPart.className = `meta-last ${color}`;
+    lastPart.textContent = `Last done ${relativeAgoText(status.lastDone, now)} (${formatDate(status.lastDone)})`;
   } else {
-    const neverLine = document.createElement("span");
-    neverLine.className = "last-ago red";
-    neverLine.textContent = "Never done";
-    lastCol.appendChild(neverLine);
+    lastPart.className = "meta-last red";
+    lastPart.textContent = "Never done";
   }
+
+  metaLine.appendChild(freqPart);
+  metaLine.appendChild(sep);
+  metaLine.appendChild(lastPart);
+
+  body.appendChild(nameLine);
+  body.appendChild(metaLine);
 
   const chevron = document.createElement("span");
   chevron.className = "col-chevron";
   chevron.textContent = "›";
 
-  btn.appendChild(nameCol);
-  btn.appendChild(freqCol);
-  btn.appendChild(lastCol);
+  btn.appendChild(iconWrap);
+  btn.appendChild(body);
   btn.appendChild(chevron);
   li.appendChild(btn);
   return li;

@@ -55,6 +55,16 @@ button {
   font-size: 0.85rem;
 }
 
+/* Small on-screen build marker, All Tasks tab only — purely so it's
+   possible to glance at the screen and tell exactly which version is
+   loaded, after multiple rounds where it wasn't clear whether an update
+   had actually reached the phone yet. Bump the number alongside CACHE_NAME
+   in service-worker.js and the ?v= in index.html whenever any file changes. */
+.build-tag {
+  opacity: 0.45;
+  font-size: 0.7rem;
+}
+
 .empty-state {
   text-align: center;
   color: var(--text-dim);
@@ -319,50 +329,6 @@ button {
   background: var(--card);
 }
 
-/* Header and rows share this exact column layout via CSS Grid, so they
-   are always pixel-aligned — no fragile padding hacks to keep them lined
-   up. Task name gets the flexible column; frequency/last-done/chevron are
-   fixed-width so a long task name wraps within its own column instead of
-   pushing into the others.
-
-   Plain flexbox on purpose, not CSS Grid: an earlier grid version (with
-   minmax(0,1fr) + overflow:hidden on the name cell) rendered fine in every
-   test screenshot but broke badly in real iPhone Safari — the name column
-   collapsed to almost nothing and wrapped one letter per line. Flexbox
-   with explicit pixel widths on the fixed columns is a much more
-   predictable cross-browser pattern for this. */
-.all-table-head,
-.all-row-btn {
-  display: flex;
-  gap: 14px; /* deliberately generous (vs. the original 6px) — keeps a
-    clear gap between the task name and the FREQ./LAST DONE columns even
-    on a long task name, while leaving enough room for the name column to
-    not collapse on a narrow phone */
-}
-
-.all-table-head {
-  align-items: center;
-  background: var(--orange);
-  color: #fff7ed;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 10px 12px;
-}
-
-/* Every column label stays fully white — .col-freq otherwise gets a
-   dimmer color below (that rule is meant for the data rows, not this
-   header, but shares the same class name). */
-.all-table-head .col-task,
-.all-table-head .col-freq,
-.all-table-head .col-last {
-  color: #fff7ed;
-}
-
-.all-table-head .col-task {
-  padding-left: 38px; /* purely cosmetic: lines the label up over the name text (after the icon) below */
-}
-
 .all-list {
   list-style: none;
   margin: 0;
@@ -373,11 +339,19 @@ button {
   border-top: 1px solid var(--card-border);
 }
 
+/* Deliberately a simple two-line stacked row, NOT a multi-column table
+   (no CSS Grid, no side-by-side flex columns). Several rounds of a
+   side-by-side FREQ/LAST-DONE column kept looking "squished" against the
+   task name on a real iPhone despite testing clean here every time — so
+   instead of another attempt at fixing horizontal column widths, this
+   removes the horizontal contest entirely: the name gets the whole row's
+   width on its own line, and frequency + last-done sit on a second,
+   smaller line below it. There's no column boundary left to get wrong. */
 .all-row-btn {
   width: 100%;
-  align-items: start; /* top-align columns so a wrapped multi-line task
-    name doesn't drift the shorter freq/last-done text down into its
-    middle line, which reads as an overlap */
+  display: flex;
+  align-items: center;
+  gap: 12px;
   background: none;
   border: none;
   padding: 12px;
@@ -387,74 +361,52 @@ button {
   font: inherit;
 }
 
-.col-task {
+.all-row-body {
+  flex: 1 1 auto;
   min-width: 0;
-  flex: 1 1 auto; /* the one flexible column — everything else has a fixed width below */
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.col-freq,
-.col-last,
-.col-chevron {
-  padding-top: 2px; /* nudge down slightly to optically align with the
-    first line of the task name rather than the icon's vertical center */
-  flex: 0 0 auto; /* never grow or shrink — fixed widths set per column below */
+  flex-direction: column;
+  gap: 2px;
 }
 
 .all-row-name {
-  min-width: 0; /* lets it actually shrink/wrap inside the flex row instead
-    of insisting on its longest word's width and spilling into the next
-    column on a narrow phone */
   overflow-wrap: break-word;
-  font-size: 0.84rem;
+  font-size: 0.9rem;
   font-weight: 600;
 }
 
-.col-freq {
-  width: 72px;
-  font-size: 0.7rem;
+.all-row-meta {
+  overflow-wrap: break-word;
+  font-size: 0.72rem;
   color: var(--text-dim);
-  line-height: 1.25;
-  overflow-wrap: break-word;
+  line-height: 1.35;
 }
 
-.col-last {
-  width: 78px;
-  display: flex;
-  flex-direction: column;
-  font-size: 0.7rem;
-  line-height: 1.3;
+.meta-sep {
+  margin: 0 5px;
+  opacity: 0.6;
 }
 
-.last-date {
-  color: var(--text);
-  overflow-wrap: break-word;
-}
-
-.last-ago {
-  font-size: 0.68rem;
+.meta-last {
   font-weight: 600;
 }
 
-.last-ago.green {
+.meta-last.green {
   color: var(--green);
 }
 
-.last-ago.amber {
+.meta-last.amber {
   color: var(--amber);
 }
 
-.last-ago.red {
+.meta-last.red {
   color: var(--red);
 }
 
 .col-chevron {
-  width: 14px;
+  flex: 0 0 auto;
   color: var(--text-dim);
   font-size: 1.1rem;
-  text-align: right;
 }
 
 /* ========================================================================

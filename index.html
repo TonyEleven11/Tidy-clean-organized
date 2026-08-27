@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="Tidy" />
 <link rel="apple-touch-icon" href="icon-192.png" />
 
-<link rel="stylesheet" href="styles.css?v=10" />
+<link rel="stylesheet" href="styles.css?v=11" />
 </head>
 <body>
 
@@ -27,23 +27,19 @@
   </main>
 </section>
 
-<!-- ALL TASKS TAB: the complete list, with frequency + last done -->
+<!-- ALL TASKS TAB: the complete list, with frequency + last done shown
+     as a subtitle line under each task name (deliberately not a
+     multi-column table — see styles.css for why). -->
 <section id="view-all" class="view" hidden>
   <header class="all-header">
     <div class="all-header-text">
       <h1>✨ All Tasks</h1>
-      <p class="app-sub">Your home, your way 💗</p>
+      <p class="app-sub">Tap a task to edit · sorted by most overdue <span class="build-tag">v11</span></p>
     </div>
     <button id="add-task-btn" class="add-btn" type="button" aria-label="Add task">+</button>
   </header>
   <main class="view-main">
     <div class="all-table">
-      <div class="all-table-head" aria-hidden="true">
-        <span class="col-task">TASK</span>
-        <span class="col-freq">FREQ.</span>
-        <span class="col-last">LAST DONE</span>
-        <span class="col-chevron"></span>
-      </div>
       <ul id="all-list" class="all-list"></ul>
     </div>
     <p id="all-empty" class="empty-state" hidden>No tasks yet. Tap + to add your first one.</p>
@@ -99,6 +95,6 @@
   </div>
 </div>
 
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

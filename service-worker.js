@@ -5,12 +5,12 @@
 // ?v= match here has to stay in sync with index.html's <link>/<script>
 // tags or this precache just wastes a request on a URL nothing else asks
 // for.
-const CACHE_NAME = "tidy-app-shell-v10";
+const CACHE_NAME = "tidy-app-shell-v11";
 const APP_SHELL = [
   "./",
   "./index.html",
-  "./styles.css?v=10",
-  "./app.js?v=10",
+  "./styles.css?v=11",
+  "./app.js?v=11",
   "./manifest.json",
   "./icon-192.png",
   "./icon-512.png",
