@@ -323,13 +323,21 @@ button {
    are always pixel-aligned — no fragile padding hacks to keep them lined
    up. Task name gets the flexible column; frequency/last-done/chevron are
    fixed-width so a long task name wraps within its own column instead of
-   pushing into the others. */
+   pushing into the others.
+
+   Plain flexbox on purpose, not CSS Grid: an earlier grid version (with
+   minmax(0,1fr) + overflow:hidden on the name cell) rendered fine in every
+   test screenshot but broke badly in real iPhone Safari — the name column
+   collapsed to almost nothing and wrapped one letter per line. Flexbox
+   with explicit pixel widths on the fixed columns is a much more
+   predictable cross-browser pattern for this. */
 .all-table-head,
 .all-row-btn {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 72px 78px 14px;
-  gap: 18px; /* deliberately generous — keeps a clear gap between the task
-    name and the FREQ./LAST DONE columns even on a long task name */
+  display: flex;
+  gap: 14px; /* deliberately generous (vs. the original 6px) — keeps a
+    clear gap between the task name and the FREQ./LAST DONE columns even
+    on a long task name, while leaving enough room for the name column to
+    not collapse on a narrow phone */
 }
 
 .all-table-head {
@@ -381,14 +389,10 @@ button {
 
 .col-task {
   min-width: 0;
-  width: 100%;
-  justify-self: stretch;
+  flex: 1 1 auto; /* the one flexible column — everything else has a fixed width below */
   display: flex;
   align-items: center;
   gap: 8px;
-  overflow: hidden; /* belt-and-suspenders: the name column can never
-    visually spill into the FREQ./LAST DONE columns next to it, even if
-    something upstream renders an unexpectedly long, unbroken word */
 }
 
 .col-freq,
@@ -396,19 +400,20 @@ button {
 .col-chevron {
   padding-top: 2px; /* nudge down slightly to optically align with the
     first line of the task name rather than the icon's vertical center */
+  flex: 0 0 auto; /* never grow or shrink — fixed widths set per column below */
 }
 
 .all-row-name {
-  min-width: 0;
-  flex: 1 1 auto;
+  min-width: 0; /* lets it actually shrink/wrap inside the flex row instead
+    of insisting on its longest word's width and spilling into the next
+    column on a narrow phone */
+  overflow-wrap: break-word;
   font-size: 0.84rem;
   font-weight: 600;
-  overflow-wrap: break-word;
-  word-break: break-word;
 }
 
 .col-freq {
-  min-width: 0;
+  width: 72px;
   font-size: 0.7rem;
   color: var(--text-dim);
   line-height: 1.25;
@@ -416,7 +421,7 @@ button {
 }
 
 .col-last {
-  min-width: 0;
+  width: 78px;
   display: flex;
   flex-direction: column;
   font-size: 0.7rem;
@@ -446,6 +451,7 @@ button {
 }
 
 .col-chevron {
+  width: 14px;
   color: var(--text-dim);
   font-size: 1.1rem;
   text-align: right;

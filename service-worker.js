@@ -1,7 +1,7 @@
 // Offline cache for the app shell. Bump CACHE_NAME whenever you change any
 // of the cached files — belt-and-suspenders alongside the network-first
 // fetch strategy below (see the fetch handler for why that matters more).
-const CACHE_NAME = "tidy-app-shell-v8";
+const CACHE_NAME = "tidy-app-shell-v9";
 const APP_SHELL = [
   "./",
   "./index.html",
