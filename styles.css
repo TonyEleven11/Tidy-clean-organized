@@ -231,8 +231,7 @@ button {
 
 .today-banner {
   max-width: 600px;
-  margin: 20px auto 0;
-  padding: 0 16px;
+  margin: 4px auto 16px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -329,7 +328,8 @@ button {
 .all-row-btn {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 72px 78px 14px;
-  gap: 6px;
+  gap: 18px; /* deliberately generous — keeps a clear gap between the task
+    name and the FREQ./LAST DONE columns even on a long task name */
 }
 
 .all-table-head {
@@ -386,6 +386,9 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
+  overflow: hidden; /* belt-and-suspenders: the name column can never
+    visually spill into the FREQ./LAST DONE columns next to it, even if
+    something upstream renders an unexpectedly long, unbroken word */
 }
 
 .col-freq,
@@ -396,9 +399,12 @@ button {
 }
 
 .all-row-name {
+  min-width: 0;
+  flex: 1 1 auto;
   font-size: 0.84rem;
   font-weight: 600;
   overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .col-freq {
